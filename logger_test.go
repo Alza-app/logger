@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -114,6 +115,47 @@ func TestLoggerWithLogger(t *testing.T) {
 	buffer.Reset()
 	performRequest(r, "GET", "/regexp02")
 	assert.NotContains(t, buffer.String(), "/regexp02")
+}
+
+func TestLoggerWithConsoleOutputFormat(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.GET("/example", SetLogger(
+		WithWriter(buffer),
+	), func(c *gin.Context) {})
+
+	performRequest(r, "GET", "/example?a=100")
+	// assertion contains color values in the output
+	assert.Contains(t, buffer.String(), "\x1b[36mmethod=\x1b[0mGET \x1b[36mpath=\x1b[0m/example \x1b[36mstatus=\x1b[0m200")
+}
+
+func TestLoggerWithWithJSONOutputFormat(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.GET("/example", SetLogger(
+		WithOutputFormat(buffer),
+	), func(c *gin.Context) {})
+
+	type jsonInterface struct {
+		Level  string `json:"level"`
+		Status int    `json:"status"`
+		Method string `json:"method"`
+		Path   string `json:"path"`
+	}
+
+	performRequest(r, "GET", "/example?a=100")
+	expected := jsonInterface{
+		Level:  "info",
+		Status: 200,
+		Method: "GET",
+		Path:   "/example",
+	}
+	var actual jsonInterface
+	err := json.Unmarshal(buffer.Bytes(), &actual)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
 }
 
 func TestLoggerWithLevels(t *testing.T) {
