@@ -30,6 +30,7 @@ type config struct {
 	clientErrorLevel zerolog.Level
 	// the log level used for request with status code >= 500
 	serverErrorLevel zerolog.Level
+	outputFormat     io.Writer
 }
 
 // SetLogger initializes the logging middleware.
@@ -47,6 +48,18 @@ func SetLogger(opts ...Option) gin.HandlerFunc {
 		o.apply(cfg)
 	}
 
+	// preserve default output writer as ConsoleWriter
+	// we can't do this in the regular options parsing
+	// since we want to use the output writer from opts if set
+	if cfg.outputFormat == nil {
+		isTerm := isatty.IsTerminal(os.Stdout.Fd())
+
+		cfg.outputFormat = zerolog.ConsoleWriter{
+			Out:     cfg.output,
+			NoColor: isTerm,
+		}
+	}
+
 	var skip map[string]struct{}
 	if length := len(cfg.skipPath); length > 0 {
 		skip = make(map[string]struct{}, length)
@@ -56,14 +69,7 @@ func SetLogger(opts ...Option) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		isTerm := isatty.IsTerminal(os.Stdout.Fd())
-		l := zerolog.New(cfg.output).
-			Output(
-				zerolog.ConsoleWriter{
-					Out:     cfg.output,
-					NoColor: !isTerm,
-				},
-			).
+		l := zerolog.New(cfg.outputFormat).
 			With().
 			Timestamp().
 			Logger()

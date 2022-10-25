@@ -57,6 +57,18 @@ func WithWriter(s io.Writer) Option {
 	})
 }
 
+// WithOutputFormat changes the format of the output.
+// This is confusingly named / implemented since it takes
+// a writer interface as well. It corresponds to the
+// zerolog.Output() function.
+// It defaults to using zerolog.ConsoleWriter with the
+// writer provided by WithWriter.
+func WithOutputFormat(s io.Writer) Option {
+	return optionFunc(func(c *config) {
+		c.outputFormat = s
+	})
+}
+
 func WithDefaultLevel(lvl zerolog.Level) Option {
 	return optionFunc(func(c *config) {
 		c.defaultLevel = lvl
