@@ -1,4 +1,4 @@
-module github.com/gin-contrib/logger
+module github.com/Alza-app/logger
 
 go 1.13
 
